@@ -135,7 +135,6 @@ def center_psi(file_name):
     pars = mod.guess(y, x=vx)
     out  = mod.fit(y, pars, x=vx)
     center =out.best_values['center']
-
     return psi, center
 
 def lenar_calc(x,y):
