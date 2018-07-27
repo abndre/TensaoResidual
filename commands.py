@@ -4,6 +4,12 @@ from scipy.signal import savgol_filter
 from lmfit.models import VoigtModel,PseudoVoigtModel, LinearModel
 from scipy import stats
 
+def plotar_intensity_position():
+    plt.grid()
+    plt.legend(loc=0)
+    plt.xlabel('Position (2/Theta)')
+    plt.ylabel('Intensity(u.a.)')
+    plt.show()
 
 
 #return K const, based in sample
@@ -96,7 +102,7 @@ def processing_of_data(x,y):
     y = savgol_filter(y, 5, 2)
     y = normalizar(y)
 
-    return x,y
+    return y
 
 
 def lenar_calc(x,y):
@@ -138,17 +144,160 @@ def read_file(file_name):
     return psi, vx, vy
 
 
+def calc_center_pseudoVoigt(vx,vy):
+    mod     = PseudoVoigtModel()
+    y       = vy
+    pars    = mod.guess(y, x=vx)
+    out     = mod.fit(y, pars, x=vx)
+    center  = out.best_values['center']
+    return center
 
 def center_psi(file_name):
+    #print(file_name)
     psi, vx, vy = read_file(file_name)
-    vx, vy = processing_of_data(vx,vy)
+    vy = processing_of_data(vx,vy)
     legenda = file_name.split('/')[-1]
-    plt.grid()
-    plt.legend(loc=0)
+    #plt.grid()
+    #plt.legend(loc=0)
     plt.plot(vx,vy,label=legenda)
     mod = PseudoVoigtModel()
     y=vy
     pars = mod.guess(y, x=vx)
     out  = mod.fit(y, pars, x=vx)
     center =out.best_values['center']
+    print('center: {} <--> psi: {}'.format(center,psi))
     return psi, center
+
+
+
+#Medidas Rigaku
+def get_value(i):
+    return float(i.split(' ')[-1].split('\n')[0])
+
+
+#list_keys = list(dicio.keys())
+
+
+def red_file_rigaku(folder_name):
+    dicio={
+        '*START':0.0,
+        '*STOP' :0.0,
+        '*STEP' :0.0,
+        '*ST_PSI_ANGLE':0.0
+    }
+
+    dados={}
+
+    file ='P_L_1/P_PB_L_1.ASC'
+    file = folder_name
+    r = open(file,'r')
+    find_intensity=False
+    x=[]
+    y=[]
+    for i in r:
+        #print(i)
+        if '*END' in i:
+            find_intensity=False
+            vx = np.asarray(x)
+            vy = np.asarray(y)
+            vy = processing_of_data(vx,vy)
+            #import pdb; pdb.set_trace()
+            plt.plot(vx,vy,label=dicio['*ST_PSI_ANGLE'])
+
+            #plt.plot(vy)
+            dados[dicio['*ST_PSI_ANGLE']]={}
+            dados[dicio['*ST_PSI_ANGLE']]['x']=vx
+            dados[dicio['*ST_PSI_ANGLE']]['y']=vy
+            x=[]
+            y=[]
+        elif find_intensity:
+            value = i.split(',')
+            for i in value:
+                if len(x)==0:
+                    x.append(dicio['*START'])
+                    y.append(float(i))
+                    dicio['*NEW_DICIO']=(dicio['*START']+dicio['*STEP'])
+                else:
+                    x.append(dicio['*NEW_DICIO'])
+                    dicio['*NEW_DICIO']=(dicio['*NEW_DICIO']+dicio['*STEP'])
+                    y.append(float(i))
+        elif '*START' in i:
+            dicio['*START']=get_value(i)
+        elif '*STOP' in i:
+            dicio['*STOP']=get_value(i)
+        elif '*STEP' in i:
+            dicio['*STEP']=get_value(i)
+        elif '*ST_PSI_ANGLE' in i:
+            dicio['*ST_PSI_ANGLE']=get_value(i)
+        elif '*COUNT' in i and not '*COUNTER' in i:
+            find_intensity=True
+
+    plotar_intensity_position()
+
+    center_list =[]
+    psi_list =[]
+    for key, value in dados.items():
+        psi_list.append(np.sin(np.radians(key))**2)
+        center = calc_center_pseudoVoigt(value['x'],value['y'])
+        center_list.append(center)
+        print('center: {} <--> psi: {}'.format(center,np.sin(np.radians(key))**2))
+
+    legenda ,x,bestY, out= lenar_calc(psi_list,center_list)
+
+    plt.plot(psi_list,center_list,'o',label='Values')
+    plt.plot(x,bestY,label='Best')
+    miny=int(min(center_list))-2
+    maxy=int(max(center_list))+2
+    maxx=round(max(psi_list),3)+round(max(psi_list),3)/2
+    plt.axis([0,maxx,miny,maxy])
+
+    plt.grid()
+    #plt.title(dados)
+    plt.legend()
+    plt.xlabel('$\sin ^{2}\omega (Mpa)$')
+    plt.ylabel('$2\Theta (Degre)$')
+    #import pdb;pdb.set_trace()
+    plt.title('{}'.format(legenda))
+    plt.show()
+
+#Chimazu
+def red_files_chimazu(folder_name):
+        #dados='P_L_PB_3_'
+        center_list =[]
+        psi_list =[]
+
+        dados = folder_name
+        first_file='P_L_/{}/{}.txt'.format(dados,dados)
+        file_names=[]
+        file_names.append(first_file)
+
+        for i in range(1,11):
+            file_name='P_L_/{}{}/{}{}.txt'.format(dados,str(i),dados,str(i))
+            file_names.append(file_name)
+
+
+
+        for file_name in file_names:
+            psi, center = center_psi(file_name)
+            psi_list.append(psi)
+            center_list.append(center)
+        plotar_intensity_position()
+        #print(psi_list)
+        #print(center_list)
+
+
+        miny=int(min(center_list))-2
+        maxy=int(max(center_list))+2
+        maxx=round(max(psi_list),3)+round(max(psi_list),3)/2
+        plt.axis([0,maxx,miny,maxy])
+
+        plt.grid()
+        plt.title(dados)
+        plt.xlabel('$\sin ^{2}\omega (Mpa)$')
+        plt.ylabel('$2\Theta (Degre)$')
+        legenda ,x,bestY,out= lenar_calc(psi_list,center_list)
+        #plt.legend(legenda)
+        plt.plot(psi_list,center_list,'o',label=('{}'.format(legenda)))
+        plt.plot(x,bestY)
+        plt.legend(loc=0)
+        plt.show()
