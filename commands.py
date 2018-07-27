@@ -4,13 +4,33 @@ from scipy.signal import savgol_filter
 from lmfit.models import VoigtModel,PseudoVoigtModel, LinearModel
 from scipy import stats
 
+def LPM(theta,psi):
+    radians     = np.radians(theta)
+    radiansby2  = np.radians(theta/2)
+    radianpsi   = np.radians(psi)
+
+    cima  = 1  + np.cos(radians)**2
+    baixo = np.sin(radiansby2)**2
+    lado  = 1 - np.tan(radianpsi)/np.tan(radiansby2)
+
+    LPM_value = (cima/baixo)*lado
+
+    return LPM_value
+
+def Lorentz_polarization_modified(psi,x,y):
+    new_list =[]
+    for key, value in enumerate(x):
+        new = LPM(value,psi)
+        new_list.append(y[key]/new)
+    #import pdb;pdb.set_trace()
+    return (new_list)
+
 def plotar_intensity_position():
     plt.grid()
     plt.legend(loc=0)
     plt.xlabel('Position (2/Theta)')
     plt.ylabel('Intensity(u.a.)')
     plt.show()
-
 
 #return K const, based in sample
 def multi(E=210000,v=0.3,theta2=156):
@@ -94,12 +114,22 @@ def removerbackground(x,y,m=5):
 #Cleand Data
 
 
-def processing_of_data(x,y):
-    y = normalizar(y)
+def processing_of_data(psi,x,y):
+    #y = normalizar(y)
+
     y = background(y)
+
     y = removerbackground(x,y)
+
+
+    #import pdb;pdb.set_trace()
+    #plt.plot(y)
+    y = Lorentz_polarization_modified(psi,x,y)
+    #plt.plot(y);plt.show();import pdb;pdb.set_trace()
     #y = removekalpha(x,y)
+
     y = savgol_filter(y, 5, 2)
+
     y = normalizar(y)
 
     return y
@@ -152,13 +182,19 @@ def calc_center_pseudoVoigt(vx,vy):
     center  = out.best_values['center']
     return center
 
+def parabol(x):
+    import pdb; pdb.set_trace()
+#    for key, value in enumerate(x):
+
+
 def center_psi(file_name):
     #print(file_name)
     psi, vx, vy = read_file(file_name)
-    vy = processing_of_data(vx,vy)
+    vy = processing_of_data(psi,vx,vy)
     legenda = file_name.split('/')[-1]
     #plt.grid()
     #plt.legend(loc=0)
+    import pdb; pdb.set_trace()
     plt.plot(vx,vy,label=legenda)
     mod = PseudoVoigtModel()
     y=vy
@@ -200,7 +236,7 @@ def red_file_rigaku(folder_name):
             find_intensity=False
             vx = np.asarray(x)
             vy = np.asarray(y)
-            vy = processing_of_data(vx,vy)
+            vy = processing_of_data(dicio['*ST_PSI_ANGLE'],vx,vy)
             #import pdb; pdb.set_trace()
             plt.plot(vx,vy,label=dicio['*ST_PSI_ANGLE'])
 
