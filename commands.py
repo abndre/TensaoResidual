@@ -48,14 +48,14 @@ def multi(E=210000,v=0.3,theta2=156):
 ##################################
 #Cleand Data
 #return novot
-def removekalpha(y,x):
-    novoy=[]
+def removekalpha(x,y):
     lambida2=1.541220
     lambida1=1.537400
     deltaL = lambida2 - lambida1
     deltaL = deltaL/lambida1
     diferenca=x[1]-x[0]
-
+    minimo=min(y)
+    novoy=[]
     for i in range(len(y)):
         deltasoma = x[1]-x[0]
         ase= np.tan(np.radians(x[i]/2))*2*deltaL/(diferenca)
@@ -69,11 +69,13 @@ def removekalpha(y,x):
 
             if yy<0:yy=(yy+y[i])/8
 
+            if yy<0:yy=minimo
             novoy.append(yy)
         except:
             novoy.append(y[i])
 
     return novoy
+
 
 #return y
 def background(y):
@@ -126,7 +128,7 @@ def processing_of_data(psi,x,y):
     #plt.plot(y)
     y = Lorentz_polarization_modified(psi,x,y)
     #plt.plot(y);plt.show();import pdb;pdb.set_trace()
-    #y = removekalpha(x,y)
+    y = removekalpha(x,y)
 
     y = savgol_filter(y, 5, 2)
 
@@ -149,7 +151,10 @@ def lenar_calc(x,y):
 
 def read_file(file_name):
     psi=0
-    r = open(file_name,'r')
+    try:
+        r = open(file_name,'r',encoding = "ISO-8859-1")
+    except:
+        return False
     printar = False
     vx = []
     vy = []
@@ -194,7 +199,7 @@ def center_psi(file_name):
     legenda = file_name.split('/')[-1]
     #plt.grid()
     #plt.legend(loc=0)
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     plt.plot(vx,vy,label=legenda)
     mod = PseudoVoigtModel()
     y=vy
@@ -297,18 +302,18 @@ def red_file_rigaku(folder_name):
     plt.show()
 
 #Chimazu
-def red_files_chimazu(folder_name):
+def red_files_chimazu(folderbefore,folder_name):
         #dados='P_L_PB_3_'
         center_list =[]
         psi_list =[]
 
         dados = folder_name
-        first_file='P_L_/{}/{}.txt'.format(dados,dados)
+        first_file='{}/{}/{}.txt'.format(folderbefore,dados,dados)
         file_names=[]
         file_names.append(first_file)
 
-        for i in range(1,11):
-            file_name='P_L_/{}{}/{}{}.txt'.format(dados,str(i),dados,str(i))
+        for i in range(1,10):
+            file_name='{}/{}{}/{}{}.txt'.format(folderbefore,dados,str(i),dados,str(i))
             file_names.append(file_name)
 
 

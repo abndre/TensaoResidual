@@ -5,5 +5,6 @@ if __name__ == "__main__":
 
 
     print('Start')
-    red_files_chimazu('P_L_PB_3_')
+    #red_files_chimazu('P_L_','P_L_PB_3_')
+    red_files_chimazu('popb','Po_PB_7,1_')
     #red_file_rigaku ('P_L_1/P_PB_L_{}.ASC'.format(7))
